@@ -1,0 +1,56 @@
+name: HA Auto Sync (Zstd to Gzip)
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # 每 6 小时检查一次
+  workflow_dispatch:       # 支持手动触发
+
+jobs:
+  sync-and-tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: 登录 GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 安装依赖工具
+        run: sudo apt-get update && sudo apt-get install -y skopeo jq
+
+      - name: 检查并转码同步
+        run: |
+          OFFICIAL="docker://homeassistant/home-assistant:latest"
+          MY_BASE="docker://ghcr.io/${{ github.repository_owner }}/home-assistant"
+
+          # 1. 获取官方最新摘要
+          OFFICIAL_DIGEST=$(skopeo inspect --raw $OFFICIAL | sha256sum | awk '{print $1}')
+          
+          # 2. 获取我仓库的摘要 (不存在则为空)
+          MY_DIGEST=$(skopeo inspect --raw ${MY_BASE}:latest 2>/dev/null | sha256sum | awk '{print $1}') || MY_DIGEST=""
+
+          if [ "$OFFICIAL_DIGEST" != "$MY_DIGEST" ]; then
+            echo "[*] 检测到新版本，开始同步..."
+
+            # 3. 自动提取官方镜像内部的真实版本号 (如 2026.3.0)
+            REAL_VERSION=$(skopeo inspect $OFFICIAL | jq -r '.Labels["org.opencontainers.image.version"]')
+            echo "[*] 探测到官方版本号: $REAL_VERSION"
+
+            # 4. 同步并转码为 latest
+            skopeo copy --all --dest-compress-format gzip $OFFICIAL ${MY_BASE}:latest
+            
+            # 5. 同时同步一份带版本号的标签 (如 2026.3.0)
+            if [ "$REAL_VERSION" != "null" ]; then
+              skopeo copy --all --dest-compress-format gzip $OFFICIAL ${MY_BASE}:${REAL_VERSION}
+              echo "[#] 版本标签 ${REAL_VERSION} 同步成功！"
+            fi
+            
+            echo "[#] Latest 标签同步成功！"
+          else
+            echo "[#] 已经是最新，跳过。"
+          fi
