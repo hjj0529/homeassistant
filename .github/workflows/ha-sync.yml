@@ -1,8 +1,8 @@
-name: HA Auto Sync (No Hyphen)
+name: HA Auto Sync (With Hyphen)
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 每天 0 点执行 (UTC)
+    - cron: '0 0 * * *'  # 每天 0 点执行 (北京时间上午 8 点)
   workflow_dispatch:      # 支持手动触发
 
 jobs:
@@ -25,28 +25,31 @@ jobs:
 
       - name: Sync and Transcode
         run: |
-          # 官方源 (带横杠) -> 你的目标 (无横杠)
+          # 官方源 (带横杠) -> 你的目标 (带横杠)
           OFFICIAL="docker://homeassistant/home-assistant:latest"
-          MY_IMAGE_BASE="docker://ghcr.io/${{ github.repository_owner }}/homeassistant"
+          MY_IMAGE_BASE="docker://ghcr.io/${{ github.repository_owner }}/home-assistant"
 
-          # 1. 检查指纹
+          # 1. 检查官方镜像指纹
           OFFICIAL_DIGEST=$(skopeo inspect --raw $OFFICIAL | sha256sum | awk '{print $1}')
+          
+          # 2. 检查你仓库里 latest 的指纹
           MY_DIGEST=$(skopeo inspect --raw ${MY_IMAGE_BASE}:latest 2>/dev/null | sha256sum | awk '{print $1}') || MY_DIGEST=""
 
           if [ "$OFFICIAL_DIGEST" != "$MY_DIGEST" ]; then
-            echo "[*] 检测到更新，开始转码..."
+            echo "[*] 检测到官方版本更新，开始转码同步..."
 
-            # 2. 提取版本号
+            # 3. 提取版本号 (如 2026.3.2)
             REAL_VERSION=$(skopeo inspect $OFFICIAL | jq -r '.Labels["org.opencontainers.image.version"]')
             
-            # 3. 推送 latest (强制 gzip)
+            # 4. 同步 latest 标签 (强制 gzip 兼容 DSM 6.2)
             skopeo copy --dest-compress-format gzip $OFFICIAL ${MY_IMAGE_BASE}:latest
             
-            # 4. 推送版本标签
+            # 5. 同步具体版本号标签
             if [ "$REAL_VERSION" != "null" ]; then
               skopeo copy --dest-compress-format gzip $OFFICIAL ${MY_IMAGE_BASE}:${REAL_VERSION}
+              echo "[#] 版本标签 ${REAL_VERSION} 同步成功"
             fi
-            echo "[#] 同步完成: ${REAL_VERSION}"
+            echo "[#] Latest 标签同步成功"
           else
-            echo "[#] 已经是最新，跳过。"
+            echo "[#] 镜像已是最新，跳过同步。"
           fi
