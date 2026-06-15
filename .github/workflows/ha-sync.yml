@@ -54,9 +54,4 @@ jobs:
             echo "[#] 镜像已是最新，跳过同步。"
           fi
 
-      # ====== 以下为新增的自动保活步骤 ======
-      - name: Checkout Repository
-        uses: actions/checkout@v4 # 保活插件需要先 checkout 代码
-
-      - name: Keepalive Workflow
-        uses: gautamkrishnar/keepalive-workflow@v1 # 当快满 60 天无提交时，它会自动触发一次微小提交来维持活跃
+      
