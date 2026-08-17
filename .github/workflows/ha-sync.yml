@@ -9,12 +9,12 @@ jobs:
   sync-process:
     runs-on: ubuntu-latest
     permissions:
-      contents: write    # 必须改为 write，否则保活插件无法提交代码。
+      contents: read     # 还原为 read，避免触发权限锁定
       packages: write
 
     steps:
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4 # 升级为 v4 解决 Node.js 弃用警告
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -53,5 +53,3 @@ jobs:
           else
             echo "[#] 镜像已是最新，跳过同步。"
           fi
-
-      
