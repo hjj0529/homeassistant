@@ -9,7 +9,7 @@ jobs:
   sync-process:
     runs-on: ubuntu-latest
     permissions:
-      contents: write    # 必须改为 write，否则保活插件无法提交代码
+      contents: write    # 必须改为 write，否则保活插件无法提交代码。
       packages: write
 
     steps:
