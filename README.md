@@ -21,7 +21,7 @@ This project uses GitHub Actions to automatically monitor official releases and 
 ### Quick Start
 Replace the image address in your `docker-compose.yml`:
 
-`image: ghcr.io/hjj0529/home-assistant:latest`
+`image: ghcr.io/quietmodem/home-assistant:latest`
 
 ---
 
@@ -42,7 +42,7 @@ Replace the image address in your `docker-compose.yml`:
 ### 快速使用
 在群晖的 docker-compose.yml 中替换镜像地址：
 
-`image: ghcr.io/hjj0529/home-assistant:latest`
+`image: ghcr.io/quietmodem/home-assistant:latest`
 
 ---
 
